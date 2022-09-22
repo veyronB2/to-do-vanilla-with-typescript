@@ -8,8 +8,8 @@ const selectors = {
     getClearButton() {
         return document.querySelector(".clear-btn");
     },
-    getCheckBoxes() {
-        return document.querySelectorAll(".checkox");
+    getFilterCheckBoxes() {
+        return document.querySelectorAll(".filter-checkbox");
     },
     getUnsortedList() {
         return document.querySelector(".items-list");
@@ -67,7 +67,6 @@ const insertTask = (tasks, value) => {
     return newTasks;
 };
 const updateTaskValue = (origToDo, updatedToDo, state) => {
-    console.log();
     return state.tasks.map((task) => {
         if (task.taskName === origToDo) {
             return Object.assign(Object.assign({}, task), { taskName: updatedToDo });
@@ -94,6 +93,7 @@ function Store(pubSub) {
         state = Object.assign(Object.assign({}, state), { tasks: updateTaskValue(origToDo, updatedToDo, state) });
         pubSub.publish(ActionType.UPDATE_TASK, state);
     }
+    // TODO:  Add function to handle filter checkboxes
     function getState() {
         return state;
     }
@@ -247,6 +247,21 @@ function runMain() {
             store.updateTaskState(origToDo, updatedToDo); //value will be updated hence using ID
             return;
         }
+    });
+    function toggleFilterCheckBoxes(e) {
+        const id = e.target.name;
+        selectors.getFilterCheckBoxes().forEach((box) => {
+            if (id === box.name) {
+                box.checked = true;
+                //  TODO: call store function to filter the tasks
+            }
+            else {
+                box.checked = false;
+            }
+        });
+    }
+    selectors.getFilterCheckBoxes().forEach((box) => {
+        box.addEventListener("click", toggleFilterCheckBoxes);
     });
 }
 runMain();
