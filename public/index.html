@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To Do List</title>
+  <link rel="stylesheet" href="../styles/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+<body>
+  <main>
+    <section class="container">
+      <p class="alert"></p>
+      <h1>to do list</h1>
+      <form class="form">
+          <input type="text" class="item-input" placeholder="add task">
+          <button class="add-btn">add</button>
+      </form>
+      <div class="filters-container">
+        <div class="checkbox-container">
+          <input type="checkbox" name="all-tasks" class="checkbox">
+          <label for="all-tasks" class="checkbox-label">all tasks</label>
+        </div>
+        <div class="checkbox-container">
+          <input type="checkbox" name="completed-tasks" class="checkbox">
+          <label for="completed-tasks" class="checkbox-label">completed</label>
+        </div>
+        <div class="checkbox-container">
+          <input type="checkbox" name="not-completed-tasks" class="checkbox">
+          <label for="not-completed-tasks" class="checkbox-label">not-completed</label>
+        </div>
+
+      </div>
+      <ul class="items-list">
+        <!-- <li class="item">
+          <input class="to-do-checkbox" type="checkbox">
+          <span class="to-do">Test2</span>
+          <button class="delete-btn">delete</button>
+        </li>
+        <li class="item">
+          <input class="to-do-checkbox" type="checkbox">
+          <span class="to-do">Test2</span>
+          <button class="delete-btn">delete</button>
+        </li> -->
+
+
+      </ul>
+      <button class="clear-btn">clear list</button>
+    </section>
+  </main>
+  <script src="../scripts/main.js"></script>
+</body>
+</html>
