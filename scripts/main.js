@@ -24,6 +24,7 @@ var ActionType;
     ActionType["ADD_TASK"] = "add task";
     ActionType["DELETE_TASK"] = "delete task";
     ActionType["UPDATE_TASK"] = "update task";
+    ActionType["TOGGLE_COMPLETED"] = "toggle completed";
 })(ActionType || (ActionType = {}));
 const INITIAL_STATE = {
     tasks: [],
@@ -55,21 +56,39 @@ function PubSub() {
         publish,
     };
 }
-const getFilteredTasks = ({ filter, state, }) => {
+const getFilteredTasks = ({ filter, state, filterCheckBoxClicked, }) => {
     return state.tasks.filter((task) => {
-        return filter
-            ? !task.taskName.toLocaleLowerCase().includes(filter.toLowerCase())
-            : state.tasks;
+        if (filterCheckBoxClicked) {
+            if (filter === "completed-tasks") {
+                return task.completed === true;
+            }
+            else if (filter === "not-completed-tasks") {
+                return task.completed === false;
+            }
+            else {
+                return state.tasks;
+            }
+        }
+        else {
+            return filter
+                ? !task.taskName.toLocaleLowerCase().includes(filter.toLowerCase())
+                : state.tasks;
+        }
     });
 };
 const insertTask = (tasks, value) => {
     const newTasks = [...tasks, { completed: false, taskName: value, id: value }];
     return newTasks;
 };
-const updateTaskValue = (origToDo, updatedToDo, state) => {
+const updateTaskValue = (origToDo, state, updatedToDo, completedStatus) => {
     return state.tasks.map((task) => {
         if (task.taskName === origToDo) {
-            return Object.assign(Object.assign({}, task), { taskName: updatedToDo });
+            if (updatedToDo) {
+                return Object.assign(Object.assign({}, task), { taskName: updatedToDo, id: updatedToDo, completed: completedStatus });
+            }
+            else {
+                return Object.assign(Object.assign({}, task), { taskName: origToDo, id: origToDo, completed: completedStatus });
+            }
         }
         else
             return task;
@@ -85,22 +104,28 @@ function Store(pubSub) {
         state = Object.assign(Object.assign({}, state), { tasks: insertTask(state.tasks, value) });
         pubSub.publish(ActionType.ADD_TASK, state);
     }
-    function deleteTask(filter) {
-        state = Object.assign(Object.assign({}, state), { tasks: getFilteredTasks({ filter, state }) });
-        pubSub.publish(ActionType.DELETE_TASK, state);
+    function filterTasks(filter, filterCheckBoxClicked) {
+        if (filterCheckBoxClicked) {
+            let tempState = state;
+            tempState = Object.assign(Object.assign({}, tempState), { tasks: getFilteredTasks({ filter, state, filterCheckBoxClicked }) });
+            pubSub.publish(ActionType.DELETE_TASK, tempState);
+        }
+        else {
+            state = Object.assign(Object.assign({}, state), { tasks: getFilteredTasks({ filter, state, filterCheckBoxClicked }) });
+            pubSub.publish(ActionType.DELETE_TASK, state);
+        }
     }
-    function updateTaskState(origToDo, updatedToDo) {
-        state = Object.assign(Object.assign({}, state), { tasks: updateTaskValue(origToDo, updatedToDo, state) });
+    function updateTaskState(origToDo, completeStatus, updatedToDo) {
+        state = Object.assign(Object.assign({}, state), { tasks: updateTaskValue(origToDo, state, updatedToDo, completeStatus) });
         pubSub.publish(ActionType.UPDATE_TASK, state);
     }
-    // TODO:  Add function to handle filter checkboxes
     function getState() {
         return state;
     }
     return {
         initialMount,
         addTask,
-        deleteTask,
+        filterTasks,
         getState,
         updateTaskState,
     };
@@ -118,10 +143,16 @@ function Renderer() {
                 const input = document.createElement("input");
                 input.type = "checkbox";
                 input.classList.add("to-do-checkbox");
+                if (task.completed) {
+                    input.checked = true;
+                }
                 const span = document.createElement("span");
                 span.innerText = task.taskName;
                 span.id = task.taskName;
                 span.classList.add("to-do");
+                if (task.completed) {
+                    span.classList.add("task-completed");
+                }
                 const delButton = document.createElement("button");
                 delButton.classList.add("delete-btn");
                 delButton.innerText = "delete";
@@ -162,11 +193,13 @@ function runMain() {
     pubSub.subscribe(ActionType.ADD_TASK, [renderer.renderItems]);
     pubSub.subscribe(ActionType.DELETE_TASK, [renderer.renderItems]);
     pubSub.subscribe(ActionType.UPDATE_TASK, [renderer.renderItems]);
+    pubSub.subscribe(ActionType.TOGGLE_COMPLETED, [renderer.renderItems]);
     /** Clean up all references in memory */
     selectors.getUnsortedList().addEventListener("unload", function () {
         pubSub.unsubscribe(ActionType.INITIAL_MOUNT, renderer.renderItems);
         pubSub.unsubscribe(ActionType.ADD_TASK, renderer.renderItems);
         pubSub.unsubscribe(ActionType.UPDATE_TASK, renderer.renderItems);
+        pubSub.unsubscribe(ActionType.TOGGLE_COMPLETED, renderer.renderItems);
     });
     store.initialMount();
     function toggleAlert(text, action) {
@@ -176,7 +209,7 @@ function runMain() {
         setTimeout(() => {
             alert.textContent = "";
             alert.classList.remove(`alert-${action}`);
-        }, 1000);
+        }, 500);
     }
     /* Event listeners */
     selectors.getAddButton().addEventListener("click", function (e) {
@@ -219,7 +252,7 @@ function runMain() {
         const saveBtn = parent.querySelector(".save-btn");
         const checkBox = parent.querySelector(".to-do-checkbox");
         if (className === "delete-btn") {
-            store.deleteTask(valueToDo);
+            store.filterTasks(valueToDo, false);
             toggleAlert("To-Do has been deleted", "danger");
             return;
         }
@@ -235,7 +268,13 @@ function runMain() {
         }
         if (className === "to-do-checkbox") {
             spanToDo.classList.toggle("task-completed");
-            //TO DO update task state as completed
+            const toDoValue = spanToDo.textContent;
+            if (checkBox.checked) {
+                store.updateTaskState(toDoValue, true);
+            }
+            else {
+                store.updateTaskState(toDoValue, false);
+            }
         }
         if (className.includes("save-btn")) {
             saveBtn.classList.remove("show-btn");
@@ -244,7 +283,7 @@ function runMain() {
             checkBox.toggleAttribute("disabled");
             spanToDo.classList.toggle("edit-to-do");
             const updatedToDo = spanToDo.innerText;
-            store.updateTaskState(origToDo, updatedToDo); //value will be updated hence using ID
+            store.updateTaskState(origToDo, false, updatedToDo);
             return;
         }
     });
@@ -252,8 +291,8 @@ function runMain() {
         const id = e.target.name;
         selectors.getFilterCheckBoxes().forEach((box) => {
             if (id === box.name) {
+                store.filterTasks(box.name, true);
                 box.checked = true;
-                //  TODO: call store function to filter the tasks
             }
             else {
                 box.checked = false;
