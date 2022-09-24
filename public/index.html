@@ -13,6 +13,11 @@
     <section class="container">
       <p class="alert"></p>
       <h1>to do list</h1>
+      <div class="stats-container">
+          <p>Total:<span id="todo-total-count">0</span></p>
+          <p>Completed: <span id="completed-todo-count">0</span>%</p>
+          <p>To Do: <span id="not-completed-todo-count">0</span>%</p>
+      </div>
       <form class="form">
           <input type="text" class="item-input" placeholder="add task">
           <button class="add-btn">add</button>
@@ -28,25 +33,15 @@
         </div>
         <div class="checkbox-container">
           <input type="checkbox" name="not-completed-tasks" class="filter-checkbox">
-          <label for="not-completed-tasks" class="checkbox-label">not-completed</label>
+          <label for="not-completed-tasks" class="checkbox-label">to do</label>
         </div>
 
       </div>
       <ul class="items-list">
-        <!-- <li class="item">
-          <input class="to-do-checkbox" type="checkbox">
-          <span class="to-do">Test2</span>
-          <button class="delete-btn">delete</button>
-        </li>
-        <li class="item">
-          <input class="to-do-checkbox" type="checkbox">
-          <span class="to-do">Test2</span>
-          <button class="delete-btn">delete</button>
-        </li> -->
-
-
+        <!-- dynamic content here -->
       </ul>
       <button class="clear-btn">clear list</button>
+
     </section>
   </main>
   <script src="../scripts/main.js"></script>

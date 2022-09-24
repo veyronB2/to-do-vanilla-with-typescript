@@ -17,17 +17,32 @@ const selectors = {
     getAlert() {
         return document.querySelector(".alert");
     },
+    getToDoCount() {
+        return document.getElementById("todo-total-count");
+    },
+    getCompletedCount() {
+        return document.getElementById("completed-todo-count");
+    },
+    getNotCompletedCount() {
+        return document.getElementById("not-completed-todo-count");
+    },
 };
 var ActionType;
 (function (ActionType) {
     ActionType["INITIAL_MOUNT"] = "initial mount";
     ActionType["ADD_TASK"] = "add task";
-    ActionType["DELETE_TASK"] = "delete task";
+    ActionType["FILTER_TASK"] = "delete task";
     ActionType["UPDATE_TASK"] = "update task";
     ActionType["TOGGLE_COMPLETED"] = "toggle completed";
+    ActionType["UPDATE_STATS"] = "update stats";
 })(ActionType || (ActionType = {}));
 const INITIAL_STATE = {
     tasks: [],
+    totalTasks: 0,
+    totalCompleted: 0,
+    totalNotCompleted: 0,
+    totalCompletedPercent: 0,
+    totalNotCompletedPercent: 0,
 };
 function PubSub() {
     const subscribers = {};
@@ -108,16 +123,47 @@ function Store(pubSub) {
         if (filterCheckBoxClicked) {
             let tempState = state;
             tempState = Object.assign(Object.assign({}, tempState), { tasks: getFilteredTasks({ filter, state, filterCheckBoxClicked }) });
-            pubSub.publish(ActionType.DELETE_TASK, tempState);
+            pubSub.publish(ActionType.FILTER_TASK, tempState);
         }
         else {
             state = Object.assign(Object.assign({}, state), { tasks: getFilteredTasks({ filter, state, filterCheckBoxClicked }) });
-            pubSub.publish(ActionType.DELETE_TASK, state);
+            pubSub.publish(ActionType.FILTER_TASK, state);
         }
     }
-    function updateTaskState(origToDo, completeStatus, updatedToDo) {
+    function updateTaskName(origToDo, completeStatus, updatedToDo) {
         state = Object.assign(Object.assign({}, state), { tasks: updateTaskValue(origToDo, state, updatedToDo, completeStatus) });
         pubSub.publish(ActionType.UPDATE_TASK, state);
+    }
+    function updateStatsState(event, taskStatus) {
+        const className = event.target.classList.toString();
+        let totalCounter = state.totalTasks;
+        let completedCounter = state.totalCompleted;
+        let notCompletedCounter = state.totalNotCompleted;
+        if (className === "add-btn") {
+            totalCounter++;
+            notCompletedCounter++;
+        }
+        else if (className === "delete-btn") {
+            totalCounter--;
+            if (taskStatus)
+                completedCounter--;
+            else
+                notCompletedCounter--;
+        }
+        else if (className === "clear-btn")
+            totalCounter = 0;
+        if (className === "to-do-checkbox") {
+            if (event.target.checked) {
+                completedCounter++;
+                notCompletedCounter--;
+            }
+            else {
+                completedCounter--;
+                notCompletedCounter++;
+            }
+        }
+        state = Object.assign(Object.assign({}, state), { totalTasks: totalCounter, totalCompleted: completedCounter, totalNotCompleted: notCompletedCounter, totalCompletedPercent: Math.round((completedCounter / totalCounter) * 100), totalNotCompletedPercent: Math.round((notCompletedCounter / totalCounter) * 100) });
+        pubSub.publish(ActionType.UPDATE_STATS, state);
     }
     function getState() {
         return state;
@@ -127,7 +173,8 @@ function Store(pubSub) {
         addTask,
         filterTasks,
         getState,
-        updateTaskState,
+        updateTaskName,
+        updateStatsState,
     };
 }
 function Renderer() {
@@ -171,6 +218,13 @@ function Renderer() {
             ul.appendChild(li);
         }
     }
+    function renderTotal(state) {
+        selectors.getToDoCount().innerText = state.totalTasks.toString();
+        selectors.getCompletedCount().innerText =
+            state.totalCompletedPercent.toString();
+        selectors.getNotCompletedCount().innerText =
+            state.totalNotCompletedPercent.toString();
+    }
     function removeItems() {
         while (ul.firstChild) {
             ul.firstChild.remove();
@@ -179,6 +233,7 @@ function Renderer() {
     return {
         renderItems,
         removeItems,
+        renderTotal,
     };
 }
 function runMain() {
@@ -191,15 +246,17 @@ function runMain() {
         renderer.renderItems,
     ]);
     pubSub.subscribe(ActionType.ADD_TASK, [renderer.renderItems]);
-    pubSub.subscribe(ActionType.DELETE_TASK, [renderer.renderItems]);
+    pubSub.subscribe(ActionType.FILTER_TASK, [renderer.renderItems]);
     pubSub.subscribe(ActionType.UPDATE_TASK, [renderer.renderItems]);
     pubSub.subscribe(ActionType.TOGGLE_COMPLETED, [renderer.renderItems]);
+    pubSub.subscribe(ActionType.UPDATE_STATS, [renderer.renderTotal]);
     /** Clean up all references in memory */
     selectors.getUnsortedList().addEventListener("unload", function () {
         pubSub.unsubscribe(ActionType.INITIAL_MOUNT, renderer.renderItems);
         pubSub.unsubscribe(ActionType.ADD_TASK, renderer.renderItems);
         pubSub.unsubscribe(ActionType.UPDATE_TASK, renderer.renderItems);
         pubSub.unsubscribe(ActionType.TOGGLE_COMPLETED, renderer.renderItems);
+        pubSub.unsubscribe(ActionType.UPDATE_STATS, renderer.renderTotal);
     });
     store.initialMount();
     function toggleAlert(text, action) {
@@ -224,14 +281,16 @@ function runMain() {
                 store.addTask(val);
                 selectors.getInput().value = "";
                 toggleAlert("To-Do has been added", "success");
+                store.updateStatsState(e);
             }
             else {
                 toggleAlert("To-Do cannot be empty. Please try again", "danger");
             }
         }
     });
-    selectors.getClearButton().addEventListener("click", function () {
+    selectors.getClearButton().addEventListener("click", function (e) {
         store.initialMount();
+        store.updateStatsState(e);
     });
     function addEventListener(eventName, selector, callback) {
         let handler = (e) => {
@@ -254,6 +313,7 @@ function runMain() {
         if (className === "delete-btn") {
             store.filterTasks(valueToDo, false);
             toggleAlert("To-Do has been deleted", "danger");
+            store.updateStatsState(e, checkBox.checked);
             return;
         }
         if (className === "to-do") {
@@ -269,11 +329,12 @@ function runMain() {
         if (className === "to-do-checkbox") {
             spanToDo.classList.toggle("task-completed");
             const toDoValue = spanToDo.textContent;
+            store.updateStatsState(e);
             if (checkBox.checked) {
-                store.updateTaskState(toDoValue, true);
+                store.updateTaskName(toDoValue, true);
             }
             else {
-                store.updateTaskState(toDoValue, false);
+                store.updateTaskName(toDoValue, false);
             }
         }
         if (className.includes("save-btn")) {
@@ -283,7 +344,7 @@ function runMain() {
             checkBox.toggleAttribute("disabled");
             spanToDo.classList.toggle("edit-to-do");
             const updatedToDo = spanToDo.innerText;
-            store.updateTaskState(origToDo, false, updatedToDo);
+            store.updateTaskName(origToDo, false, updatedToDo);
             return;
         }
     });
