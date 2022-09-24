@@ -150,11 +150,6 @@ function Store(pubSub) {
             else
                 notCompletedCounter--;
         }
-        else if (className === "clear-btn") {
-            totalCounter = 0;
-            completedCounter = 0;
-            notCompletedCounter = 0;
-        }
         if (className === "to-do-checkbox") {
             if (event.target.checked) {
                 completedCounter++;
@@ -248,6 +243,7 @@ function runMain() {
     pubSub.subscribe(ActionType.INITIAL_MOUNT, [
         renderer.removeItems,
         renderer.renderItems,
+        renderer.renderTotal,
     ]);
     pubSub.subscribe(ActionType.ADD_TASK, [renderer.renderItems]);
     pubSub.subscribe(ActionType.FILTER_TASK, [renderer.renderItems]);
@@ -295,6 +291,7 @@ function runMain() {
     selectors.getClearButton().addEventListener("click", function (e) {
         store.initialMount();
         store.updateStatsState(e);
+        toggleFilterCheckBoxes(e);
     });
     function addEventListener(eventName, selector, callback) {
         let handler = (e) => {
@@ -353,14 +350,23 @@ function runMain() {
         }
     });
     function toggleFilterCheckBoxes(e) {
-        const id = e.target.name;
         selectors.getFilterCheckBoxes().forEach((box) => {
-            if (id === box.name) {
-                store.filterTasks(box.name, true);
-                box.checked = true;
+            const checkBoxName = box.name;
+            if (e.target.classList.toString() === "clear-btn") {
+                if (checkBoxName === "all-tasks")
+                    box.checked = true;
+                else
+                    box.checked = false;
             }
-            else {
-                box.checked = false;
+            else if (e.target.classList.toString() === "filter-checkbox") {
+                const name = e.target.name;
+                if (name === checkBoxName) {
+                    store.filterTasks(box.name, true);
+                    box.checked = true;
+                }
+                else {
+                    box.checked = false;
+                }
             }
         });
     }
