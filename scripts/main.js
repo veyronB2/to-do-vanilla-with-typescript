@@ -150,8 +150,11 @@ function Store(pubSub) {
             else
                 notCompletedCounter--;
         }
-        else if (className === "clear-btn")
+        else if (className === "clear-btn") {
             totalCounter = 0;
+            completedCounter = 0;
+            notCompletedCounter = 0;
+        }
         if (className === "to-do-checkbox") {
             if (event.target.checked) {
                 completedCounter++;
@@ -162,7 +165,8 @@ function Store(pubSub) {
                 notCompletedCounter++;
             }
         }
-        state = Object.assign(Object.assign({}, state), { totalTasks: totalCounter, totalCompleted: completedCounter, totalNotCompleted: notCompletedCounter, totalCompletedPercent: Math.round((completedCounter / totalCounter) * 100), totalNotCompletedPercent: Math.round((notCompletedCounter / totalCounter) * 100) });
+        state = Object.assign(Object.assign({}, state), { totalTasks: totalCounter, totalCompleted: completedCounter, totalNotCompleted: notCompletedCounter, totalCompletedPercent: completedCounter && Math.round((completedCounter / totalCounter) * 100), totalNotCompletedPercent: notCompletedCounter &&
+                Math.round((notCompletedCounter / totalCounter) * 100) });
         pubSub.publish(ActionType.UPDATE_STATS, state);
     }
     function getState() {

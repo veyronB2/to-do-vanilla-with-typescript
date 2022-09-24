@@ -220,7 +220,11 @@ function Store(pubSub: PubSub) {
       totalCounter--;
       if (taskStatus) completedCounter--;
       else notCompletedCounter--;
-    } else if (className === "clear-btn") totalCounter = 0;
+    } else if (className === "clear-btn") {
+      totalCounter = 0;
+      completedCounter = 0;
+      notCompletedCounter = 0;
+    }
 
     if (className === "to-do-checkbox") {
       if ((event.target as HTMLInputElement).checked) {
@@ -237,12 +241,11 @@ function Store(pubSub: PubSub) {
       totalTasks: totalCounter,
       totalCompleted: completedCounter,
       totalNotCompleted: notCompletedCounter,
-      totalCompletedPercent: Math.round(
-        (completedCounter / totalCounter) * 100
-      ),
-      totalNotCompletedPercent: Math.round(
-        (notCompletedCounter / totalCounter) * 100
-      ),
+      totalCompletedPercent:
+        completedCounter && Math.round((completedCounter / totalCounter) * 100),
+      totalNotCompletedPercent:
+        notCompletedCounter &&
+        Math.round((notCompletedCounter / totalCounter) * 100),
     };
     pubSub.publish(ActionType.UPDATE_STATS, state);
   }
